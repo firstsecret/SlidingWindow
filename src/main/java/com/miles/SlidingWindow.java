@@ -61,11 +61,9 @@ public class SlidingWindow {
     private void cleanTask(){
         cleanExecutorService.scheduleWithFixedDelay(()->{
             long time = System.currentTimeMillis() / 1000;
-            if(time % 10 == 0){
-                time -= 10;
-                for (int i=10; i>0;i--){
-                    counter.remove(time - i);
-                }
+            time -= windowLen * 2;
+            for (int i=10; i>0;i--){
+                counter.remove(time - i);
             }
         },15,10,TimeUnit.SECONDS);
     }

@@ -2,12 +2,13 @@ package com.miles;
 
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author `70miles
  */
 public class SlidingWindow {
-    private Map<Long, Long> counter = new ConcurrentHashMap<>();
+    private Map<Long, AtomicLong> counter = new ConcurrentHashMap<>();
 
     private static ScheduledExecutorService scheduledExecutorService;
 
@@ -16,6 +17,8 @@ public class SlidingWindow {
     private Integer windowLen = 5;
 
     private static ScheduledExecutorService cleanExecutorService;
+
+    private static final Object lock = new Object();
 
     static {
         scheduledExecutorService= new ScheduledThreadPoolExecutor(5);
@@ -34,13 +37,18 @@ public class SlidingWindow {
                 int reqs = (int) (Math.random() * 5) + 1;
                 System.out.println("============= one time start =============");
                 System.out.println("mock req num:" + reqs);
-                Long reqVal = counter.getOrDefault(time, 0L);
-                reqVal += reqs;
-                counter.put(time, reqVal);
+                if (counter.get(time) == null){
+                    synchronized (lock){
+                       while (counter.get(time) == null){
+                           counter.put(time, new AtomicLong(0));
+                       }
+                    }
+                }
+                counter.get(time).getAndAdd(reqs);
                 System.out.println("mock val insert:" + counter.get(time));
                 long nums = 0;
                 for (int i = 0; i < windowLen; i++) {
-                    nums += counter.getOrDefault(time - i,0L);
+                    nums += counter.getOrDefault(time - i, new AtomicLong()).longValue();
                 }
                 System.out.println("当前流量：" + nums);
                 if (nums > overflow) {
